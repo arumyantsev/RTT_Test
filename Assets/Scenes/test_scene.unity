@@ -383,6 +383,14 @@ MonoBehaviour:
   wallRotateY: 0
   wallExitBuffer: 3
   wallBlendSpeed: 1
+  rtsShakeYPosRange: 0.5
+  rtsShakeZPosRange: 0.3
+  rtsShakeYRotRange: 2
+  rtsShakeZRotRange: 2
+  rtsShakeSpeed: 1.5
+  tpsFOV: 30
+  rtsFOV: 30
+  fovLerpSpeed: 5
   followSpeed: 2
   offsetLerpSpeed: 2
   transitionSpeed: 1
@@ -2092,6 +2100,74 @@ Mesh:
     offset: 0
     size: 0
     path: 
+--- !u!1001 &1794855020
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 6102101279336162210, guid: 91e493027b55c9647912dbb463968ef7,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 94.25
+      objectReference: {fileID: 0}
+    - target: {fileID: 6102101279336162210, guid: 91e493027b55c9647912dbb463968ef7,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.0000014305115
+      objectReference: {fileID: 0}
+    - target: {fileID: 6102101279336162210, guid: 91e493027b55c9647912dbb463968ef7,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 76.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 6102101279336162210, guid: 91e493027b55c9647912dbb463968ef7,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6102101279336162210, guid: 91e493027b55c9647912dbb463968ef7,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6102101279336162210, guid: 91e493027b55c9647912dbb463968ef7,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6102101279336162210, guid: 91e493027b55c9647912dbb463968ef7,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6102101279336162210, guid: 91e493027b55c9647912dbb463968ef7,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6102101279336162210, guid: 91e493027b55c9647912dbb463968ef7,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6102101279336162210, guid: 91e493027b55c9647912dbb463968ef7,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6909881254674020632, guid: 91e493027b55c9647912dbb463968ef7,
+        type: 3}
+      propertyPath: m_Name
+      value: Tigra_RIG (1)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 91e493027b55c9647912dbb463968ef7, type: 3}
 --- !u!1 &1804226686
 GameObject:
   m_ObjectHideFlags: 0
@@ -2227,6 +2303,7 @@ SceneRoots:
   - {fileID: 832575519}
   - {fileID: 1804226689}
   - {fileID: 154669942}
+  - {fileID: 1794855020}
   - {fileID: 1242990249}
   - {fileID: 381277877}
   - {fileID: 183279599}

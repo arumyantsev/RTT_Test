@@ -31,6 +31,11 @@ public class CameraFollow : MonoBehaviour
     public float rtsShakeZRotRange = 2f;
     public float rtsShakeSpeed = 1.5f;
 
+    [Header("Camera FOV Settings")]
+    public float tpsFOV = 60f;
+    public float rtsFOV = 75f;
+    public float fovLerpSpeed = 5f;
+
     [Header("Smoothness")]
     public float followSpeed = 5f;
     public float offsetLerpSpeed = 5f;
@@ -44,6 +49,7 @@ public class CameraFollow : MonoBehaviour
     private float shakeTime = 0f;
 
     private Unit unitScript;
+    private Camera cam;
 
     private void Start()
     {
@@ -53,6 +59,8 @@ public class CameraFollow : MonoBehaviour
 
         if (target != null)
             unitScript = target.GetComponent<Unit>();
+
+        cam = Camera.main;
     }
 
     public void FollowTarget(Transform newTarget)
@@ -117,7 +125,7 @@ public class CameraFollow : MonoBehaviour
         Vector3 baseOffset = unitScript.IsMoving() ? movingOffset : stoppedOffset;
         Vector3 baseRotation = unitScript.IsMoving() ? movingRotation : stoppedRotation;
 
-        // 🎯 Apply RTS camera shake only when stopped
+        // RTS camera shake
         if (!unitScript.IsMoving())
         {
             float shakeY = Mathf.Sin(shakeTime) * rtsShakeYPosRange;
@@ -181,6 +189,13 @@ public class CameraFollow : MonoBehaviour
             Quaternion lookRot = Quaternion.LookRotation(lookDir);
             lookRot *= Quaternion.Euler(currentRotOffset.x, 0, currentRotOffset.z);
             transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, followSpeed * Time.deltaTime);
+        }
+
+        // Smooth FOV transition
+        if (cam != null)
+        {
+            float targetFOV = unitScript.IsMoving() ? tpsFOV : rtsFOV;
+            cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, targetFOV, fovLerpSpeed * Time.deltaTime);
         }
     }
 }
