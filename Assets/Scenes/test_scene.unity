@@ -373,15 +373,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   target: {fileID: 0}
-  movingOffset: {x: 0, y: 3, z: 8}
-  movingRotation: {x: 10, y: 0, z: 0}
-  stoppedOffset: {x: 0, y: 11, z: 11}
-  stoppedRotation: {x: 40, y: 0, z: 0}
-  horizontalOffset: 2
+  movingOffset: {x: 0, y: 2, z: 6}
+  movingRotation: {x: 0, y: 0, z: 0}
+  stoppedOffset: {x: 0, y: 13, z: 18}
+  stoppedRotation: {x: -5, y: 0, z: 0}
+  horizontalOffset: 3
+  wallCheckDistance: 3
+  wallPushX: 10
+  wallRotateY: 0
+  wallExitBuffer: 3
+  wallBlendSpeed: 1
   followSpeed: 2
   offsetLerpSpeed: 2
   transitionSpeed: 1
-  flipCheckDistance: 1
 --- !u!1 &381277871
 GameObject:
   m_ObjectHideFlags: 0

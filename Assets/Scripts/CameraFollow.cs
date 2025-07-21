@@ -17,8 +17,12 @@ public class CameraFollow : MonoBehaviour
 
     [Header("Wall Adjustment")]
     public float wallCheckDistance = 1.0f;
-    public float wallPushX = 1.5f;         // How much to shift offset X away from wall
-    public float wallRotateY = 30f;        // How much to rotate Y offset when near wall
+    public float wallPushX = 1.5f;
+    public float wallRotateY = 30f;
+
+    [Header("Wall Mode Smoothing")]
+    public float wallExitBuffer = 1.5f;
+    public float wallBlendSpeed = 3f;
 
     [Header("Smoothness")]
     public float followSpeed = 5f;
@@ -29,6 +33,8 @@ public class CameraFollow : MonoBehaviour
     private float currentOffset;
     private Vector3 currentPosOffset;
     private Vector3 currentRotOffset;
+
+    private float wallEffectBlend = 0f;
 
     private Unit unitScript;
 
@@ -60,56 +66,71 @@ public class CameraFollow : MonoBehaviour
     {
         if (!isFollowing || target == null || unitScript == null) return;
 
-        // Get base offset and rotation
-        Vector3 baseOffset = unitScript.IsMoving() ? movingOffset : stoppedOffset;
-        Vector3 baseRotation = unitScript.IsMoving() ? movingRotation : stoppedRotation;
-
-        // Wall detection
+        // Direction setup
         Vector3 forwardDir = target.forward;
         forwardDir.y = 0;
         forwardDir.Normalize();
         Vector3 rightDir = Vector3.Cross(Vector3.up, forwardDir);
         Vector3 sideOrigin = target.position + Vector3.up * 1.5f;
 
+        // Wall detection
         bool leftBlocked = Physics.Raycast(sideOrigin, -rightDir, wallCheckDistance);
         bool rightBlocked = Physics.Raycast(sideOrigin, rightDir, wallCheckDistance);
 
-        // Adjust X offset and Y rotation if near wall
-        float adjustedX = baseOffset.x;
-        float adjustedY = baseRotation.y;
+        // Check extended range for wall exit buffer
+        bool wallNearby = false;
+        float wallDistance = Mathf.Infinity;
+        RaycastHit wallHit;
 
-        if (leftBlocked && !rightBlocked)
+        if (Physics.Raycast(sideOrigin, -rightDir, out wallHit, wallCheckDistance + wallExitBuffer))
         {
-            adjustedX = horizontalOffset + wallPushX;
-            adjustedY = baseRotation.y + wallRotateY;
+            wallNearby = true;
+            wallDistance = wallHit.distance;
         }
-        else if (rightBlocked && !leftBlocked)
+        else if (Physics.Raycast(sideOrigin, rightDir, out wallHit, wallCheckDistance + wallExitBuffer))
         {
-            adjustedX = -horizontalOffset - wallPushX;
-            adjustedY = baseRotation.y - wallRotateY;
+            wallNearby = true;
+            wallDistance = wallHit.distance;
         }
+
+        float targetBlend = 0f;
+
+        if (wallNearby && wallDistance <= wallCheckDistance)
+            targetBlend = 1f;
+        else if (wallNearby && wallDistance <= wallCheckDistance + wallExitBuffer)
+            targetBlend = 1f - Mathf.InverseLerp(wallCheckDistance, wallCheckDistance + wallExitBuffer, wallDistance);
         else
-        {
-            adjustedX = horizontalOffset;
-            adjustedY = baseRotation.y;
-        }
+            targetBlend = 0f;
 
-        // Create adjusted vectors
-        Vector3 targetOffset = new Vector3(adjustedX, baseOffset.y, baseOffset.z);
-        Vector3 targetRotation = new Vector3(baseRotation.x, adjustedY, baseRotation.z);
+        wallEffectBlend = Mathf.MoveTowards(wallEffectBlend, targetBlend, wallBlendSpeed * Time.deltaTime);
 
-        // Smooth blend
+        // Base offsets
+        Vector3 baseOffset = unitScript.IsMoving() ? movingOffset : stoppedOffset;
+        Vector3 baseRotation = unitScript.IsMoving() ? movingRotation : stoppedRotation;
+
+        // Wall-adjusted values
+        float sideSign = rightBlocked ? -1 : (leftBlocked ? 1 : Mathf.Sign(horizontalOffset));
+        float wallXOffset = horizontalOffset + sideSign * wallPushX;
+        float wallYRot = baseRotation.y + sideSign * wallRotateY;
+
+        Vector3 adjustedOffset = new Vector3(wallXOffset, baseOffset.y, baseOffset.z);
+        Vector3 adjustedRotation = new Vector3(baseRotation.x, wallYRot, baseRotation.z);
+
+        // Blend between base and wall-modified
+        Vector3 targetOffset = Vector3.Lerp(baseOffset, adjustedOffset, wallEffectBlend);
+        Vector3 targetRotation = Vector3.Lerp(baseRotation, adjustedRotation, wallEffectBlend);
+
         currentPosOffset = Vector3.Lerp(currentPosOffset, targetOffset, transitionSpeed * Time.deltaTime);
         currentRotOffset = Vector3.Lerp(currentRotOffset, targetRotation, transitionSpeed * Time.deltaTime);
-        currentOffset = Mathf.Lerp(currentOffset, adjustedX, offsetLerpSpeed * Time.deltaTime);
+        currentOffset = Mathf.Lerp(currentOffset, targetOffset.x, offsetLerpSpeed * Time.deltaTime);
 
-        // Calculate camera position
+        // Calculate desired camera position
         Vector3 desiredPosition = target.position
                                 - forwardDir * currentPosOffset.z
                                 + Vector3.up * currentPosOffset.y
                                 + rightDir * currentOffset;
 
-        // Prevent wall clipping
+        // Obstacle avoidance
         Vector3 castOrigin = target.position + Vector3.up * 1.5f;
         Vector3 directionToCamera = (desiredPosition - castOrigin).normalized;
         float distance = Vector3.Distance(castOrigin, desiredPosition);
@@ -117,18 +138,25 @@ public class CameraFollow : MonoBehaviour
         if (Physics.Raycast(castOrigin, directionToCamera, out RaycastHit hit, distance))
             desiredPosition = hit.point - directionToCamera * 0.2f;
 
+        // Apply position
         transform.position = Vector3.Lerp(transform.position, desiredPosition, followSpeed * Time.deltaTime);
 
-        // Smooth rotation
-        Vector3 lookDirToUnit = (target.position - transform.position).normalized;
-        Vector3 blendedLookDir = Vector3.Lerp(forwardDir, lookDirToUnit, 0.3f);
-        blendedLookDir.y = 0;
+        // Orbit around unit center using rotation offset
+        Vector3 pivotPoint = target.position + Vector3.up * 1.5f;
+        Quaternion orbitRotation = Quaternion.Euler(0, currentRotOffset.y, 0);
+        Vector3 offsetDir = orbitRotation * (transform.position - pivotPoint);
+        Vector3 rotatedCameraPos = pivotPoint + offsetDir;
 
-        if (blendedLookDir != Vector3.zero)
+        transform.position = Vector3.Lerp(transform.position, rotatedCameraPos, followSpeed * Time.deltaTime);
+
+        // Look at unit with tilt
+        Vector3 lookDir = pivotPoint - transform.position;
+
+        if (lookDir != Vector3.zero)
         {
-            Quaternion desiredRotation = Quaternion.LookRotation(blendedLookDir);
-            desiredRotation *= Quaternion.Euler(currentRotOffset);
-            transform.rotation = Quaternion.Slerp(transform.rotation, desiredRotation, followSpeed * Time.deltaTime);
+            Quaternion lookRot = Quaternion.LookRotation(lookDir);
+            lookRot *= Quaternion.Euler(currentRotOffset.x, 0, currentRotOffset.z);
+            transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, followSpeed * Time.deltaTime);
         }
     }
 }
