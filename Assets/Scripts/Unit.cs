@@ -12,6 +12,11 @@ public class Unit : MonoBehaviour
     private bool isMoving;
     private float stoppingDistance = 1f;
     public SelectableObject selectableObject;
+    public bool IsMoving()
+    {
+        return isMoving;
+    }
+
 
     private void Start()
     {

@@ -14,9 +14,12 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     private GameObject destinationMarker;
     public bool isShiftDown = false;
+    private CameraFollow cameraFollow;
+
 
     private void Start()
     {
+        cameraFollow = Camera.main.GetComponent<CameraFollow>();
         _instance = this;
         selectedUnits = new List<Unit>();
     }
@@ -65,6 +68,12 @@ public class GameManager : MonoBehaviour
             HideUnitSelectionIndicators();
             selectedUnits.Clear();
             selectedUnits.Add(unit);
+
+            // Camera follow only one unit
+            if (cameraFollow != null)
+            {
+                cameraFollow.FollowTarget(unit.transform);
+            }
         }
         unit.selectableObject.ShowSelectionIndicator();
         
