@@ -15,13 +15,15 @@ public class CameraFollow : MonoBehaviour
     [Header("Shoulder Settings")]
     public float horizontalOffset = 2f;
 
+    [Header("Wall Adjustment")]
+    public float wallCheckDistance = 1.0f;
+    public float wallPushX = 1.5f;         // How much to shift offset X away from wall
+    public float wallRotateY = 30f;        // How much to rotate Y offset when near wall
+
     [Header("Smoothness")]
     public float followSpeed = 5f;
     public float offsetLerpSpeed = 5f;
-    public float transitionSpeed = 2f; // camera blend speed when switching states
-
-    [Header("Collision Settings")]
-    public float flipCheckDistance = 1.0f;
+    public float transitionSpeed = 2f;
 
     private bool isFollowing = false;
     private float currentOffset;
@@ -37,9 +39,7 @@ public class CameraFollow : MonoBehaviour
         currentRotOffset = movingRotation;
 
         if (target != null)
-        {
             unitScript = target.GetComponent<Unit>();
-        }
     }
 
     public void FollowTarget(Transform newTarget)
@@ -60,32 +60,50 @@ public class CameraFollow : MonoBehaviour
     {
         if (!isFollowing || target == null || unitScript == null) return;
 
-        // Blend to stop/move offsets
-        Vector3 targetOffset = unitScript.IsMoving() ? movingOffset : stoppedOffset;
-        Vector3 targetRotation = unitScript.IsMoving() ? movingRotation : stoppedRotation;
+        // Get base offset and rotation
+        Vector3 baseOffset = unitScript.IsMoving() ? movingOffset : stoppedOffset;
+        Vector3 baseRotation = unitScript.IsMoving() ? movingRotation : stoppedRotation;
 
-        currentPosOffset = Vector3.Lerp(currentPosOffset, targetOffset, transitionSpeed * Time.deltaTime);
-        currentRotOffset = Vector3.Lerp(currentRotOffset, targetRotation, transitionSpeed * Time.deltaTime);
-
-        // Forward/right directions
+        // Wall detection
         Vector3 forwardDir = target.forward;
         forwardDir.y = 0;
         forwardDir.Normalize();
         Vector3 rightDir = Vector3.Cross(Vector3.up, forwardDir);
         Vector3 sideOrigin = target.position + Vector3.up * 1.5f;
 
-        // Check wall side
-        bool isRightBlocked = Physics.Raycast(sideOrigin, rightDir, flipCheckDistance);
-        bool isLeftBlocked = Physics.Raycast(sideOrigin, -rightDir, flipCheckDistance);
+        bool leftBlocked = Physics.Raycast(sideOrigin, -rightDir, wallCheckDistance);
+        bool rightBlocked = Physics.Raycast(sideOrigin, rightDir, wallCheckDistance);
 
-        if (horizontalOffset >= 0 && isLeftBlocked && !isRightBlocked)
-            currentOffset = Mathf.Lerp(currentOffset, -Mathf.Abs(horizontalOffset), offsetLerpSpeed * Time.deltaTime);
-        else if (horizontalOffset <= 0 && isRightBlocked && !isLeftBlocked)
-            currentOffset = Mathf.Lerp(currentOffset, Mathf.Abs(horizontalOffset), offsetLerpSpeed * Time.deltaTime);
+        // Adjust X offset and Y rotation if near wall
+        float adjustedX = baseOffset.x;
+        float adjustedY = baseRotation.y;
+
+        if (leftBlocked && !rightBlocked)
+        {
+            adjustedX = horizontalOffset + wallPushX;
+            adjustedY = baseRotation.y + wallRotateY;
+        }
+        else if (rightBlocked && !leftBlocked)
+        {
+            adjustedX = -horizontalOffset - wallPushX;
+            adjustedY = baseRotation.y - wallRotateY;
+        }
         else
-            currentOffset = Mathf.Lerp(currentOffset, horizontalOffset, offsetLerpSpeed * Time.deltaTime);
+        {
+            adjustedX = horizontalOffset;
+            adjustedY = baseRotation.y;
+        }
 
-        // Compute desired camera position
+        // Create adjusted vectors
+        Vector3 targetOffset = new Vector3(adjustedX, baseOffset.y, baseOffset.z);
+        Vector3 targetRotation = new Vector3(baseRotation.x, adjustedY, baseRotation.z);
+
+        // Smooth blend
+        currentPosOffset = Vector3.Lerp(currentPosOffset, targetOffset, transitionSpeed * Time.deltaTime);
+        currentRotOffset = Vector3.Lerp(currentRotOffset, targetRotation, transitionSpeed * Time.deltaTime);
+        currentOffset = Mathf.Lerp(currentOffset, adjustedX, offsetLerpSpeed * Time.deltaTime);
+
+        // Calculate camera position
         Vector3 desiredPosition = target.position
                                 - forwardDir * currentPosOffset.z
                                 + Vector3.up * currentPosOffset.y
@@ -101,7 +119,7 @@ public class CameraFollow : MonoBehaviour
 
         transform.position = Vector3.Lerp(transform.position, desiredPosition, followSpeed * Time.deltaTime);
 
-        // Blend look direction and apply extra rotation
+        // Smooth rotation
         Vector3 lookDirToUnit = (target.position - transform.position).normalized;
         Vector3 blendedLookDir = Vector3.Lerp(forwardDir, lookDirToUnit, 0.3f);
         blendedLookDir.y = 0;
