@@ -24,6 +24,13 @@ public class CameraFollow : MonoBehaviour
     public float wallExitBuffer = 1.5f;
     public float wallBlendSpeed = 3f;
 
+    [Header("RTS Drone Camera Shake")]
+    public float rtsShakeYPosRange = 0.5f;
+    public float rtsShakeZPosRange = 0.3f;
+    public float rtsShakeYRotRange = 2f;
+    public float rtsShakeZRotRange = 2f;
+    public float rtsShakeSpeed = 1.5f;
+
     [Header("Smoothness")]
     public float followSpeed = 5f;
     public float offsetLerpSpeed = 5f;
@@ -33,8 +40,8 @@ public class CameraFollow : MonoBehaviour
     private float currentOffset;
     private Vector3 currentPosOffset;
     private Vector3 currentRotOffset;
-
     private float wallEffectBlend = 0f;
+    private float shakeTime = 0f;
 
     private Unit unitScript;
 
@@ -65,6 +72,8 @@ public class CameraFollow : MonoBehaviour
     private void LateUpdate()
     {
         if (!isFollowing || target == null || unitScript == null) return;
+
+        shakeTime += Time.deltaTime * rtsShakeSpeed;
 
         // Direction setup
         Vector3 forwardDir = target.forward;
@@ -104,9 +113,25 @@ public class CameraFollow : MonoBehaviour
 
         wallEffectBlend = Mathf.MoveTowards(wallEffectBlend, targetBlend, wallBlendSpeed * Time.deltaTime);
 
-        // Base offsets
+        // Base offset and rotation
         Vector3 baseOffset = unitScript.IsMoving() ? movingOffset : stoppedOffset;
         Vector3 baseRotation = unitScript.IsMoving() ? movingRotation : stoppedRotation;
+
+        // 🎯 Apply RTS camera shake only when stopped
+        if (!unitScript.IsMoving())
+        {
+            float shakeY = Mathf.Sin(shakeTime) * rtsShakeYPosRange;
+            float shakeZ = Mathf.Cos(shakeTime * 0.8f) * rtsShakeZPosRange;
+
+            float rotShakeY = Mathf.Sin(shakeTime * 0.6f) * rtsShakeYRotRange;
+            float rotShakeZ = Mathf.Cos(shakeTime * 0.7f) * rtsShakeZRotRange;
+
+            baseOffset.y += shakeY;
+            baseOffset.z += shakeZ;
+
+            baseRotation.y += rotShakeY;
+            baseRotation.z += rotShakeZ;
+        }
 
         // Wall-adjusted values
         float sideSign = rightBlocked ? -1 : (leftBlocked ? 1 : Mathf.Sign(horizontalOffset));
@@ -138,7 +163,6 @@ public class CameraFollow : MonoBehaviour
         if (Physics.Raycast(castOrigin, directionToCamera, out RaycastHit hit, distance))
             desiredPosition = hit.point - directionToCamera * 0.2f;
 
-        // Apply position
         transform.position = Vector3.Lerp(transform.position, desiredPosition, followSpeed * Time.deltaTime);
 
         // Orbit around unit center using rotation offset
